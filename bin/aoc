@@ -1,0 +1,157 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'optparse'
+
+class AdventOfCodeCLI
+  def initialize
+    @options = {
+      year: nil,
+      day: nil,
+      part: 1,
+      test: false,
+      help: false
+    }
+  end
+
+  def run
+    parse_arguments
+    return print_help if @options[:help]
+
+    if @options[:year] && @options[:day]
+      run_solution
+    else
+      puts 'Error: Year and day are required'
+      print_help
+    end
+  end
+
+  private
+
+  def parse_arguments
+    OptionParser.new do |opts|
+      opts.banner = 'Usage: aoc [options]'
+
+      opts.on('-y', '--year YEAR', 'Year (e.g., 2025)') do |year|
+        @options[:year] = year.to_i
+      end
+
+      opts.on('-d', '--day DAY', 'Day (1-25)') do |day|
+        @options[:day] = day.to_i
+      end
+
+      opts.on('-p', '--part PART', 'Part (1 or 2)') do |part|
+        @options[:part] = part.to_i
+      end
+
+      opts.on('-t', '--test', 'Run tests instead of solution') do
+        @options[:test] = true
+      end
+
+      opts.on('-h', '--help', 'Show this help message') do
+        @options[:help] = true
+      end
+    end.parse!
+  end
+
+  def print_help
+    puts <<~HELP
+      Advent of Code Runner
+
+      Usage: aoc [options]
+
+      Options:
+        -y, --year YEAR    Year (e.g., 2025)
+        -d, --day DAY      Day (1-25)
+        -p, --part PART    Part (1 or 2, default: 1)
+        -t, --test         Run tests instead of solution
+        -h, --help         Show this help message
+
+      Examples:
+        aoc -y 2025 -d 1 -p 1    # Run part 1 of day 1, 2025
+        aoc -y 2025 -d 2 -p 2    # Run part 2 of day 2, 2025
+        aoc -y 2025 -d 1 -t      # Run tests for day 1, 2025
+    HELP
+  end
+
+  def run_solution
+    year_dir = "year_#{@options[:year]}"
+    day_dir = "day_#{@options[:day].to_s.rjust(2, '0')}"
+    solution_file = "resolve_#{@options[:part]}.rb"
+
+    full_path = File.join(__dir__, '..', year_dir, day_dir, solution_file)
+    full_path = File.expand_path(full_path)
+
+    unless File.exist?(full_path)
+      puts "Error: Solution not found at #{full_path}"
+      return
+    end
+
+    if @options[:test]
+      run_tests(full_path)
+    else
+      run_solution_file(full_path)
+    end
+  end
+
+  def run_tests(solution_file_path)
+    puts "Running tests for #{File.basename(solution_file_path)}..."
+    system("ruby -I . #{solution_file_path}")
+  end
+
+  def run_solution_file(solution_file_path)
+    input_file = File.join(File.dirname(solution_file_path), 'input.txt')
+
+    unless File.exist?(input_file)
+      puts "Error: Input file not found at #{input_file}"
+      return
+    end
+
+    puts 'Running solution...'
+
+    # Read the file content
+    content = File.read(solution_file_path)
+
+    # Extract just the module code (everything before require 'minitest/autorun')
+    module_code = extract_module_code(content)
+    unless module_code
+      puts "Error: Could not extract module code from #{solution_file_path}"
+      return
+    end
+
+    # Extract module name
+    module_name = extract_module_name(content)
+    unless module_name
+      puts "Error: Could not determine module name from #{solution_file_path}"
+      return
+    end
+
+    # Create a clean binding and evaluate the module code
+    binding = TOPLEVEL_BINDING.dup
+    eval(module_code, binding)
+
+    # Get the module and call resolve_file
+    module_parts = module_name.split('::')
+    solution_module = module_parts.reduce(Object) { |obj, name| obj.const_get(name) }
+    result = solution_module.resolve_file(input_file)
+
+    puts "Result: #{result}"
+  end
+
+  def extract_module_code(content)
+    # Find everything from the module definition up to (but not including) require 'minitest/autorun'
+    if (match = content.match(/(module\s+\w+(?:::\w+)*.*?)(?=^\s*require\s+['"]minitest)/m))
+      match[1]
+    elsif (match = content.match(/(module\s+\w+(?:::\w+)*.*)/m))
+      match[1]
+    end
+  end
+
+  def extract_module_name(content)
+    return unless (match = content.match(/module\s+(\w+(?:::\w+)*)/))
+
+    match[1]
+  end
+end
+
+AdventOfCodeCLI.new.run if __FILE__ == $PROGRAM_NAME

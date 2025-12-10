@@ -27,3 +27,18 @@ Metrics/AbcSize:
 
 Metrics/CyclomaticComplexity:
   Enabled: false
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/BlockLength:
+  Enabled: false
+
+Security/Eval:
+  Enabled: false
+
+Naming/VariableNumber:
+  Enabled: false
+
+Lint/DuplicateBranch:
+  Enabled: false

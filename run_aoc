@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+# Simple wrapper for Advent of Code runner
+# Usage: ./run_aoc [year] [day] [part]
+# Example: ./run_aoc 2025 1 1
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Default values
+YEAR=""
+DAY=""
+PART="1"
+TEST_MODE=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -y|--year)
+      YEAR="$2"
+      shift 2
+      ;;
+    -d|--day)
+      DAY="$2"
+      shift 2
+      ;;
+    -p|--part)
+      PART="$2"
+      shift 2
+      ;;
+    -t|--test)
+      TEST_MODE=true
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: ./run_aoc [options]"
+      echo "Options:"
+      echo "  -y, --year YEAR    Year (e.g., 2025)"
+      echo "  -d, --day DAY      Day (1-25)"
+      echo "  -p, --part PART    Part (1 or 2, default: 1)"
+      echo "  -t, --test         Run tests instead of solution"
+      echo "  -h, --help         Show this help message"
+      echo ""
+      echo "Examples:"
+      echo "  ./run_aoc -y 2025 -d 1 -p 1"
+      echo "  ./run_aoc -y 2025 -d 2 -p 2"
+      echo "  ./run_aoc -y 2025 -d 1 -t"
+      exit 0
+      ;;
+    *)
+      # Try to parse as positional arguments
+      if [[ -z "$YEAR" ]]; then
+        YEAR="$1"
+      elif [[ -z "$DAY" ]]; then
+        DAY="$1"
+      elif [[ -z "$PART" ]]; then
+        PART="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+# If using positional arguments in format: year day part
+if [[ $# -eq 3 ]]; then
+  YEAR="$1"
+  DAY="$2"
+  PART="$3"
+fi
+
+# Check if year and day are provided
+if [[ -z "$YEAR" ]] || [[ -z "$DAY" ]]; then
+  echo "Error: Year and day are required"
+  echo "Usage: ./run_aoc -y YEAR -d DAY [-p PART] [-t]"
+  echo "       ./run_aoc YEAR DAY [PART]"
+  exit 1
+fi
+
+# Build command
+CMD="$SCRIPT_DIR/bin/aoc -y $YEAR -d $DAY"
+
+if [[ "$TEST_MODE" == true ]]; then
+  CMD="$CMD -t"
+else
+  CMD="$CMD -p $PART"
+fi
+
+# Run the command
+exec $CMD
